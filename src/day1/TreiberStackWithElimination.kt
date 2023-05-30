@@ -40,7 +40,15 @@ class TreiberStackWithElimination<E> : Stack<E> {
         // Someone may have grabbed the element after we
         // stopped checking for CELL_STATE_RETRIEVED
 
-        return !eliminationArray[index].compareAndSet(element, CELL_STATE_EMPTY)
+        if (eliminationArray[index].compareAndSet(element, CELL_STATE_EMPTY)) {
+            return false
+        }
+
+        if (!eliminationArray[index].compareAndSet(CELL_STATE_RETRIEVED, CELL_STATE_EMPTY)) {
+            error("Test for element has failed, so this should have not")
+        }
+
+        return true
     }
 
     override fun pop(): E? = tryPopElimination() ?: stack.pop()
