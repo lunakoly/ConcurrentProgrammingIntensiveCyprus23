@@ -14,15 +14,21 @@ class InfiniteArrayOfNulls<E> {
     }
 
     fun getSegmentByIndex(index: Int): Pair<Segment, Int> {
+        val currentHead = segmentHead.value
+        val currentTail = segmentTail.value
+
         val segmentIndex = index / SEGMENT_SIZE
         val localIndex = index % SEGMENT_SIZE
-        var current = segmentHead.value
+
+        var current = when {
+            currentTail.index <= segmentIndex -> currentTail
+            else -> currentHead
+        }
 
         while (current.index < segmentIndex) {
             val maybeNextSegment = Segment(current.index + 1)
 
             current = if (current.next.compareAndSet(null, maybeNextSegment)) {
-                segmentTail.value = maybeNextSegment
                 maybeNextSegment
             } else {
                 current.next.value ?: error("CAS == null failed, but no next segment found")
@@ -34,7 +40,20 @@ class InfiniteArrayOfNulls<E> {
 
     fun moveHeadToNextSegmentAfter(segment: Segment) {
         val nextSegment = segment.next.value ?: return
-        segmentHead.compareAndSet(segment, nextSegment)
+        val currentHead = segmentHead.value
+
+        if (currentHead.index < nextSegment.index) {
+            segmentHead.compareAndSet(currentHead, nextSegment)
+        }
+    }
+
+    fun moveTailToNextSegmentAfter(segment: Segment) {
+        val nextSegment = segment.next.value ?: return
+        val currentTail = segmentTail.value
+
+        if (currentTail.index < nextSegment.index) {
+            segmentTail.compareAndSet(currentTail, nextSegment)
+        }
     }
 
     inner class Segment(
@@ -60,6 +79,10 @@ class FAABasedQueue<E> : Queue<E> {
             val (segment, index) = infiniteArray.getSegmentByIndex(i)
 
             if (segment.data[index].compareAndSet(null, element)) {
+                if (index == SEGMENT_SIZE - 1) {
+                    infiniteArray.moveTailToNextSegmentAfter(segment)
+                }
+
                 return
             }
         }
