@@ -172,11 +172,7 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
                 // list seeking for the desired `element`.
                 // next.value = null
 
-                val nextPrevious = nextNode.prev.value
-
-                if (nextPrevious != null) {
-                    nextNode.prev.compareAndSet(nextPrevious, previousNode)
-                }
+                nextNode.prev.compareAndSet(this, previousNode)
             }
 
             if (previousNode.extractedOrRemoved) {
