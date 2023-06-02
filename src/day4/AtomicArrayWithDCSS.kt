@@ -73,28 +73,48 @@ class AtomicArrayWithDCSS<E : Any>(size: Int, initialValue: E) {
             SUCCESS -> getNewValueOf(index)
         }
 
-        fun applyOperation() {
-            while (status.value == UNDECIDED) {
-                array[index1].compareAndSet(expected1, this)
+        private fun canOccupyCell(index: Int, expected: E?): Boolean {
+            array[index].compareAndSet(expected, this)
 
-                when (val value = array[index1].value) {
-                    this -> break
-                    is AtomicArrayWithDCSS<*>.DCSSDescriptor -> value.applyOperation()
-                    expected1 -> {} // really?, fuck you
-                    else -> status.compareAndSet(UNDECIDED, FAILED)
-                }
-            }
-
-            when (get(index2)) {
-                expected2 -> status.compareAndSet(UNDECIDED, SUCCESS)
+            when (val value = array[index].value) {
+                this -> return true
+                is AtomicArrayWithDCSS<*>.DCSSDescriptor -> value.applyOperation()
+                expected -> {} // really?, fuck you
                 else -> status.compareAndSet(UNDECIDED, FAILED)
             }
 
-            when (status.value) {
-                SUCCESS -> array[index1].compareAndSet(this, update1)
-                FAILED -> array[index1].compareAndSet(this, expected1)
+            return false
+        }
+
+        fun applyOperation() {
+            val (firstIndex, firstExpected) = when {
+                index1 <= index2 -> index1 to expected1
+                else -> index2 to expected2
+            }
+
+            val (secondIndex, secondExpected) = when {
+                index1 <= index2 -> index2 to expected2
+                else -> index1 to expected1
+            }
+
+            while (status.value == UNDECIDED && !canOccupyCell(firstIndex, firstExpected)) {
+                // Keep trying
+            }
+
+            while (status.value == UNDECIDED && !canOccupyCell(secondIndex, secondExpected)) {
+                // Keep trying
+            }
+
+            status.compareAndSet(UNDECIDED, SUCCESS)
+
+            val (reset1, reset2) = when (status.value) {
+                SUCCESS -> update1 to expected2
+                FAILED -> expected1 to expected2
                 else -> error("Should not have come this far")
             }
+
+            array[index1].compareAndSet(this, reset1)
+            array[index2].compareAndSet(this, reset2)
         }
     }
 
