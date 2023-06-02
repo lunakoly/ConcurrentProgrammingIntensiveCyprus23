@@ -1,10 +1,11 @@
 package day4
 
 import kotlinx.atomicfu.*
+import day4.AtomicArrayWithDCSS.Status.*
 
 // This implementation never stores `null` values.
 class AtomicArrayWithDCSS<E : Any>(size: Int, initialValue: E) {
-    private val array = atomicArrayOfNulls<E>(size)
+    private val array = atomicArrayOfNulls<Any>(size)
 
     init {
         // Fill array with the initial value.
@@ -13,14 +14,26 @@ class AtomicArrayWithDCSS<E : Any>(size: Int, initialValue: E) {
         }
     }
 
-    fun get(index: Int): E? {
-        // TODO: the cell can store a descriptor
-        return array[index].value
+    // TODO: the cell can store a descriptor
+    @Suppress("UNCHECKED_CAST")
+    fun get(index: Int): E? = when (val value = array[index].value) {
+        is AtomicArrayWithDCSS<*>.DCSSDescriptor -> value.getValueOf(index) as E?
+        else -> value as E?
     }
 
-    fun cas(index: Int, expected: E?, update: E?): Boolean {
+    fun cas(index: Int, expected: Any?, update: Any?): Boolean {
         // TODO: the cell can store a descriptor
-        return array[index].compareAndSet(expected, update)
+        while (true) {
+            if (array[index].compareAndSet(expected, update)) {
+                return true
+            }
+
+            when (val value = array[index].value) {
+                is AtomicArrayWithDCSS<*>.DCSSDescriptor -> value.applyOperation()
+                expected -> {}
+                else -> return false
+            }
+        }
     }
 
     fun dcss(
@@ -30,8 +43,62 @@ class AtomicArrayWithDCSS<E : Any>(size: Int, initialValue: E) {
         require(index1 != index2) { "The indices should be different" }
         // TODO This implementation is not linearizable!
         // TODO Store a DCSS descriptor in array[index1].
-        if (array[index1].value != expected1 || array[index2].value != expected2) return false
-        array[index1].value = update1
-        return true
+
+        val descriptor = DCSSDescriptor(index1, expected1, update1, index2, expected2)
+            .also { it.applyOperation() }
+
+        return descriptor.status.value == SUCCESS
+    }
+
+    inner class DCSSDescriptor(
+        private val index1: Int, private val expected1: E?, private val update1: E?,
+        private val index2: Int, private val expected2: E?,
+    ) {
+        val status = atomic(UNDECIDED)
+
+        private fun getOldValueOf(index: Int) = when (index) {
+            index1 -> expected1
+            index2 -> expected2
+            else -> error("No such index found in the descriptor: index = $index")
+        }
+
+        private fun getNewValueOf(index: Int) = when (index) {
+            index1 -> update1
+            index2 -> expected2
+            else -> error("No such index found in the descriptor: index = $index")
+        }
+
+        fun getValueOf(index: Int) = when (status.value) {
+            UNDECIDED, FAILED -> getOldValueOf(index)
+            SUCCESS -> getNewValueOf(index)
+        }
+
+        fun applyOperation() {
+            while (status.value == UNDECIDED) {
+                array[index1].compareAndSet(expected1, this)
+
+                when (val value = array[index1].value) {
+                    this -> break
+                    is AtomicArrayWithDCSS<*>.DCSSDescriptor -> value.applyOperation()
+                    expected1 -> {} // really?, fuck you
+                    else -> status.compareAndSet(UNDECIDED, FAILED)
+                }
+            }
+
+            when (get(index2)) {
+                expected2 -> status.compareAndSet(UNDECIDED, SUCCESS)
+                else -> status.compareAndSet(UNDECIDED, FAILED)
+            }
+
+            when (status.value) {
+                SUCCESS -> array[index1].compareAndSet(this, update1)
+                FAILED -> array[index1].compareAndSet(this, expected1)
+                else -> error("Should not have come this far")
+            }
+        }
+    }
+
+    enum class Status {
+        UNDECIDED, FAILED, SUCCESS
     }
 }
