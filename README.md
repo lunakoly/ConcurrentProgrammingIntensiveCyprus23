@@ -96,7 +96,7 @@ To test your solution, please run:
 
 ### Flat-combining queue
 
-In [`src/day3/FlatCombiningQueue.kt`](src/day3/FlatCombiningQueue.kt), implement a concurrent queue via the
+In [`src/day2/FlatCombiningQueue.kt`](src/day2/FlatCombiningQueue.kt), implement a concurrent queue via the
 _flat-combining_ technique,
 using a sequential queue under the hood. You might be interested in the corresponding
 [academic paper]((https://dl.acm.org/doi/pdf/10.1145/1810479.1810540?casa_token=Yo13gxOeFhwAAAAA:qS33gvUFNhI4t_2ioHnZz0egK8PFq0Mg7MT0ma1-26aeQYKk7aZBzEHEY6iFMiu-GEmzsBMuSibDkg))
@@ -111,7 +111,7 @@ To test your solution, please run:
 
 ### Linear-time removals in Michael-Scott queue
 
-In [`src/day2/MSQueueWithLinearTimeRemove.kt`](src/day2/MSQueueWithLinearTimeRemove.kt),
+In [`src/day3/MSQueueWithLinearTimeRemove.kt`](src/day3/MSQueueWithLinearTimeRemove.kt),
 implement a Michael-Scott queue with an additional `remove(element)` operation.
 The implementation should find the first node that contains the specified element
 in linear time and then remove this node also in linear time.
@@ -123,7 +123,7 @@ To test your solution, please run:
 
 ### Constant-time removals in Michael-Scott queue
 
-In [`src/day2/MSQueueWithLinearTimeRemove.kt`](src/day2/MSQueueWithLinearTimeRemove.kt),
+In [`src/day3/MSQueueWithLinearTimeRemove.kt`](src/day3/MSQueueWithLinearTimeRemove.kt),
 implement a Michael-Scott queue with an additional `remove(element)` operation.
 The implementation should find the first node that contains the specified element
 in linear time, but remove this node in _constant_ time.
@@ -133,7 +133,7 @@ in linear time, but remove this node in _constant_ time.
 
 ### Array of Atomic Counters
 
-In [`src/day3/AtomicCounterArray.kt`](src/day3/AtomicCounterArray.kt),
+In [`src/day4/AtomicCounterArray.kt`](src/day4/AtomicCounterArray.kt),
 implement the `inc2(..)` function that atomically increments two counters.
 using the CAS2 algorithm. In this data structure, all successful updates
 install unique values in the array cells.
@@ -146,7 +146,7 @@ To test your solution, please run:
 
 ### Double-Compare-Single-Set
 
-In [`src/day3/AtomicArrayWithDCSS.kt`](src/day3/AtomicArrayWithDCSS.kt),
+In [`src/day4/AtomicArrayWithDCSS.kt`](src/day4/AtomicArrayWithDCSS.kt),
 implement the `dcss(..)` operation. Similarly to CAS2, it requires
 allocating a descriptor and installing it in the updating memory location.
 We need the `dcss(..)` operation for the next task, to resolve the ABA-problem
@@ -159,7 +159,7 @@ To test your solution, please run:
 
 ### CAS2
 
-In [`src/day3/AtomicArrayWithCAS2.kt`](src/day3/AtomicArrayWithCAS2.kt),
+In [`src/day4/AtomicArrayWithCAS2.kt`](src/day4/AtomicArrayWithCAS2.kt),
 implement the `cas2(..)` operation. Unlike in the array of atomic counters,
 which values always increase, now updates are no longer unique.
 This can lead to the ABA problem. To solve it, please use
